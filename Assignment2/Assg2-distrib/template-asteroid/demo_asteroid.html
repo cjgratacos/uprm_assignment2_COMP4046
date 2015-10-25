@@ -1,0 +1,194 @@
+<html>
+
+<head>
+<title>HTML5 Canvas &mdash; Demo asteroid</title>
+<meta http-equiv="content-type" content="text/html; charset=UTF8">
+<script type="text/javascript" src="dat.gui.js"></script>
+<script type="text/javascript" src="gl-matrix.js"></script>
+
+<style>
+    canvas {border: solid 1px black}
+    td {vertical-align: top;}
+</style>
+</head>
+
+<script type="text/javascript">
+    window.requestAnimFrame = (function() {
+      return window.requestAnimationFrame ||
+             window.webkitRequestAnimationFrame ||
+             window.mozRequestAnimationFrame ||
+             window.oRequestAnimationFrame ||
+             window.msRequestAnimationFrame ||
+             function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
+               window.setTimeout(callback, 1000/60);
+             };
+    })();
+
+    var canvas;
+    var ctx;
+    var w,h;
+   
+    var params
+    function initParams() {
+        params = {
+            'x0': w/2,
+            'y0': h/2,
+            'angle': 0,
+            'inSpace': false,
+            'bounceOnBorder': false,
+            'angleVelocity': 180, // 1 turn in 2s
+            'velocity': 20,
+            'vx': 0,
+            'vy': 0,
+            'acceleration': 0.1
+        }
+    }
+   
+    /* ### GUI ### */
+    var gui;		
+    function initGUI() 
+    {
+        gui = new dat.GUI({ autoPlace: true });
+
+        gui.add(params, 'x0').min(0).max(w).step(1)//.listen()
+        gui.add(params, 'y0').min(0).max(h).step(1)//.listen()
+        gui.add(params, 'angle').min(-180).max(180).step(1)//.listen()
+        gui.add(params, 'inSpace')
+        gui.add(params, 'bounceOnBorder')
+        gui.add(params, 'angleVelocity').min(0).max(720).step(0.1) // 720 deg max in 1s
+        gui.add(params, 'velocity').min(0).max(50).step(0.1) // 50 pix max in 1s
+        gui.add(params, 'vx').min(-50).max(+50).step(0.1)//.listen()
+        gui.add(params, 'vy').min(-50).max(+50).step(0.1)//.listen()
+        gui.add(params, 'acceleration').min(0).max(+50).step(0.1)
+        
+        //var parent = document.getElementById('controls');      
+        //parent.appendChild(gui.domElement);
+    }
+
+    /* ### Keyboard ### */
+    var currentlyPressedKeys = {};
+    function initKeys(canvas) {
+        canvas.setAttribute('tabindex','0');
+        canvas.focus();
+
+        canvas.addEventListener( "keydown", handleKeyDown, true);
+        canvas.addEventListener( "keyup", handleKeyUp, true);
+    }
+    function handleKeyDown(event) {
+        // Uncomment this to display key presses to find the keyCodes
+        //console.log(event)
+        event.preventDefault();
+        currentlyPressedKeys[event.keyCode] = true;
+    
+        // Handle single key presses (for example for firing the gun)
+        if (event.keyCode == 67) { // K
+            comsole.log('Pressed "K"')
+        }
+    }
+    function handleKeyUp(event) {
+        currentlyPressedKeys[event.keyCode] = false;
+    }
+    function handleKeys() {
+        // Rotation
+        if (currentlyPressedKeys[37]) { //Left
+            params.angle -= params.angleVelocity * elapsed
+        }
+        if (currentlyPressedKeys[39]) { // Right
+            params.angle += params.angleVelocity * elapsed
+        }
+        if (params.angle > 180) params.angle-=360;
+        else if (params.angle < -180) params.angle += 360;
+        
+        if (currentlyPressedKeys[38]) { // Up
+            // TODO: ship translation
+        }
+        if (currentlyPressedKeys[40]) { // Down
+            // TODO: ship translation
+        }
+    }
+
+    /* ### Timing and main loop ### */
+    var startTime = 0;
+    var lastTime = 0;
+    var elapsed = 0, totalElapsed = 0;
+    function animate() {
+        var timeNow = new Date().getTime() / 1000; // All expressed in seconds
+        if (lastTime != 0) {
+            elapsed = (timeNow - lastTime);
+        } else {
+            startTime = timeNow;
+        }
+        lastTime = timeNow;
+    }
+    function tick() {
+        animate();
+        handleKeys();
+        drawAll();
+        requestAnimFrame(tick);
+    }
+
+    /* ### Drawing ### */
+    function drawShip(ctx) {
+
+        // Define transformation before drawing ship    
+        ctx.setTransform(1,0,0, 1,0,0)
+        ctx.translate(params.x0, params.y0)
+        ctx.rotate(params.angle/180*Math.PI)
+
+        ctx.beginPath()
+        ctx.moveTo(0, -20)
+        ctx.lineTo(10, 10)
+        ctx.lineTo(-10, 10)
+        ctx.lineTo(0, -20)
+        ctx.strokeStyle="red";
+        ctx.lineWidth = 2;
+        ctx.stroke()
+
+        // Reset canvas transformation after drawing
+        ctx.setTransform(1,0,0, 1,0,0)
+    }
+
+    function drawAll() {
+        ctx.clearRect(0,0,canvas.width,canvas.height)
+
+        drawShip(ctx)
+    }
+
+    /* ### Initialization ### */ 
+    function start() {
+        canvas = document.getElementById('canvas');
+        ctx = canvas.getContext('2d');
+        
+        w = canvas.width;
+        h = canvas.height;
+
+        // Do init
+        initParams()
+        initGUI()
+        initKeys(canvas)
+
+        // Launch main animation loop
+        tick()
+    }
+</script>
+
+<body onload="start();">
+    <h2>Asteroid</h2>
+    <table><tbody><tr>
+    
+    <td>
+    <table><tbody>
+    <tr>
+    <td><canvas id="canvas" width="300" height="300"></canvas></td>
+    </tr>
+    <tr>
+    <td>Canvas</td>
+    </tr>
+    <tr>
+    <td><small><span id="text"></span></small></td>
+    </tr>
+    </tbody></table>
+    </td>
+    
+</body>
+</html>   
