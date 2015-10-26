@@ -40,8 +40,6 @@ function init_app() {
     );
 }
 
-/* ### GUI ### */
-
 
 /* ### Mouse Event Handler ### */
 function onMouseDown(event) {
@@ -63,11 +61,7 @@ function onMouseDown(event) {
         this.original.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.drawSquare(this.original.ctx, xpix, ypix, 4);
 
-        if (this.point === null || this.point === undefined) {
-            this.point = new $Point(xpix, ypix);
-        } else {
-            this.point.resetPoint(xpix, ypix);
-        }
+        this.initPoint(xpix,ypix);
 
         this.drawAll();
     } else if (event.target == this.transform.canvas) {
@@ -79,6 +73,14 @@ function onMouseDown(event) {
                 //params.x0 = xpix; params.y0 = ypix;
                 //drawAll()
         }
+        this.original.ctx.strokeStyle = '#ff8000'; // Orange
+        this.original.ctx.lineWidth = 4;
+        this.original.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+        this.initPoint(xpix,ypix,true);
+        this.drawSquare(this.original.ctx, this.point.current_x, this.point.current_y, 4);
+        this.drawAllInverse(xpix,ypix);
+
     }
 }
 
@@ -86,13 +88,23 @@ function onMouseMove(event) {
     // Dispatch move event to drag if we are currently dragging the red pin
     if ((this.dragRedPin > 0) && (event.target == this.transform)) return this.onDragRedPin(event);
     // Ignore else
-    if (this.point !== null && this.point.active) {
-        var rect = event.target.getBoundingClientRect();
-        var xpix = event.clientX - rect.left;
-        var ypix = event.clientY - rect.top;
-        this.point.setCurrent(xpix, ypix);
-        this.drawPolyline(this.original.ctx, this.point, xpix, ypix);
-        this.drawAll();
+
+    if (event.target == this.original.canvas) {
+        if (this.point !== null && this.point.active) {
+            var rect = event.target.getBoundingClientRect();
+            var xpix = event.clientX - rect.left;
+            var ypix = event.clientY - rect.top;
+            this.point.setCurrent(xpix, ypix);
+            this.drawPolyline(this.original.ctx, this.point, xpix, ypix);
+            this.drawAll();
+        }
+    }else if(event.target == this.transform.canvas){
+        if (this.point !== null && this.point.active) {
+            var rect = event.target.getBoundingClientRect();
+            var xpix = event.clientX - rect.left;
+            var ypix = event.clientY - rect.top;
+            this.drawAllInverse(xpix,ypix);
+        }
     }
 }
 
@@ -113,7 +125,7 @@ function onDragRedPin(event) {
     // Assume (event.target == canvas2)
     this.params.x0 = xpix;
     this.params.y0 = ypix;
-    this.drawAll()
+    this.drawAll();
 }
 
 
@@ -159,7 +171,6 @@ function Part2Constructor(canvasName1, canvasName2, params, datFolder, eventHand
 
 
     this.drawAll();
-    this.drawBoundingBox(this.original.ctx, this.original.boundingBoxPoints);
 }
 
 Part2Constructor.prototype.initGUI = function (datFolder) {
@@ -182,8 +193,8 @@ Part2Constructor.prototype.initMouseEventListener = function (eventHandlerObject
 
 Part2Constructor.prototype.drawPin = function () {
     // Reset canvases
-    this.original.ctx.setTransform(1, 0, 0, 1, 0, 0) // Reset transform
-    this.transform.ctx.setTransform(1, 0, 0, 1, 0, 0)
+    this.original.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+    this.transform.ctx.setTransform(1, 0, 0, 1, 0, 0);
         //this.original.ctx.clearRect(0,0,w1,h1)  // Clear canvas
     this.transform.ctx.clearRect(0, 0, this.transform.w, this.transform.h);
 
@@ -240,10 +251,11 @@ Part2Constructor.prototype.transformMat = function (M) {
     mat3.rotate(M, M, this.params.angle);
     mat3.translate(M, M, [-(this.original.w / 2), 0]);
 }
-Part2Constructor.prototype.drawImage = function (M,ctx,canvasImage) {
+
+Part2Constructor.prototype.drawImage = function (M, ctx, canvasImage) {
     ctx.setTransform(M[0], M[1], M[3], M[4], M[6], M[7]);
-    ctx.drawImage(canvasImage,0,0);
-    ctx.setTransform(1,0,0,1,0,0);
+    ctx.drawImage(canvasImage, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 Part2Constructor.prototype.drawAll = function () {
@@ -260,17 +272,57 @@ Part2Constructor.prototype.drawAll = function () {
 
     // TODO: Q3 - Draw bounding box of canvas1 transformed to canvas2
 
-    this.drawImage(M,this.transform.ctx,this.original.canvas);
+    this.drawImage(M, this.transform.ctx, this.original.canvas);
+
+    this.drawBoundingBox(this.original.ctx, this.original.boundingBoxPoints);
     this.drawBoundingBox(this.transform.ctx, this.transform.boundingBoxPoints);
 
     // TODO: Q5 - Copy canvas1 transformed into canvas2
 
+
+
+    //Translate the Matrix M to [(this.original.w / 2), 0] so the GUI appears synchronize with the location of          the red Pin
     mat3.translate(M, M, [(this.original.w / 2), 0]);
+    //Draw the Matrix in the HTML
     var matElem = document.getElementById('mat');
     matElem.innerHTML = 'M = ' + mat3.toHTML(M);
 }
 
-Part2Constructor.prototype.drawPolyline = function (ctx, point, x, y) {
+Part2Constructor.prototype.drawAllInverse = function (xpix,ypix) {
+    this.drawPin();
+
+    var M = mat3.create();
+    var v2 = vec2.create();
+    this.transformMat(M);
+    mat3.invert(M,M);
+    vec2.transformMat3(v2,[xpix,ypix],M);
+    this.point.setCurrent(v2[0],v2[1]);
+    this.drawPolyline(this.original.ctx,this.point);
+
+    this.drawBoundingBox(this.transform.ctx, this.transform.boundingBoxPoints);
+    this.drawAll();
+}
+
+Part2Constructor.prototype.initPoint = function(xpix,ypix,inverse){
+    inverse = inverse || false;
+
+    if (this.point === null || this.point === undefined) {
+            this.point = new $Point(xpix, ypix);
+        } else {
+            this.point.resetPoint(xpix, ypix);
+        }
+
+    if(inverse){
+        var M = mat3.create();
+        var v2 = vec2.create();
+        this.transformMat(M);
+        mat3.invert(M,M);
+        vec2.transformMat3(v2,[xpix,ypix],M);
+        this.point.setCurrent(v2[0],v2[1]);
+    }
+}
+
+Part2Constructor.prototype.drawPolyline = function (ctx, point) {
     ctx.strokeStyle = '#ff8000'; // Orange
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -285,6 +337,8 @@ Part2Constructor.prototype.drawBoundingBox = function (ctx, points) {
     ctx.lineWidth = 6;
     this.drawShape(ctx, points);
 }
+
+
 
 
 ////Point Function Constructor for Part 2
