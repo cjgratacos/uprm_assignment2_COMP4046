@@ -1,28 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Assignment #2</title>
     <link href="css/concise.css" rel="stylesheet">
     <link href="css/main.css" rel="stylesheet">
 </head>
+
 <body onload="init_app()">
     <header>
         <nav>
             <h1>Assignment 2: Geometry and GUI</h1>
             <p class="left-padding">Carlos Gratacos, COMP4046, UPRM 2015S1</p>
-            <h4 id="part_name">Animation and Keyboard</h4>
+            <h4 id="part_name">Bonus</h4>
             <ul>
-              <li><a href="./index.html">Main</a></li>
+                <li><a href="./index.html">Main</a></li>
                 <li><a href="#">First Part</a></li>
                 <li><a href="./index2.html">Second Part</a></li>
+                <li><a href="./indexBonus.html">Bonus</a></li>
             </ul>
         </nav>
     </header>
     <div id="part1">
         <div class="row-block">
             <div class="column-block">
-                   <h4>Asteroid: Original</h4>
+                <h4>Asteroid: Original</h4>
                 <canvas class="canvas" id="asteroid-original" height="300" width="300"></canvas>
                 <button class="bg--muted buttonx" onclick="focusCanvas('asteroid-original',this)">Asteroid: Original</button>
             </div>
@@ -43,8 +46,54 @@
             </div>
         </div>
     </div>
+    <div class="panel ">
+       <p>
+           <h4>Instructions</h4>
+        <p>
+            Non of the canvas has the Focus. Each canvas represents the solution to the question stated in the title. To add focus to the canvas and iteract with it using the GUI, touch the button bellow the canvas before interaction.
+            NOTE: All canvas share the same GUI.
+        </p>
+        <a href="./js/main_part1.js">JS for Part 1</a>
+       </p>
+        <p>
+            <h4>Q1 Answer</h4>
+            <p>NOTE: I modified the code, but this is from the original file.</p>
+    <p>Read PDF from Here: <a href="">Assignment 2 PDF Answers</a></p>
+            <p>By analyzing the code, when the Javascript engine loads the file and runs the first stage (of the two stages) it activates it’s “strict mode”, after the creation phase of the Javascript engine, which loads and creates the memory space needed by the JS variables and functions of the file, it starts its second stage, the execution phase. In this phase, when all the variables are loaded, the first execution context that is ran by the JS engine is the start function (it is called by the JS event handler when the body of the HTML page ends loading) which initializes:</p>
+            <p style="padding-left:5em">
+                1) obtaining the canvas context,
+                <br> 2) obtaining the canvas width and height and assigning them to variables w and h,
+                <br> 3) initializes the params object and assign variables, the most important are x0,y0 which initially x0 = w/2 and y0=h/2, this set of variables are used later on (will explain) for the drawing of the ship in the middle of the canvas.
+                <br> 4) Then it will initialize the dat GUI instance folder (with the initGUI function) and assign the variables inside the object params to the dat folder with their value range.
+                <br> 5) Then it will start the key event listener inside the initKeys function, this function initiates the custom key press handler and listens, initially to the keyUP and keyDown event, each event listener is set to the capture event, and have as callback functions that toggle the values of a Boolean variable.
+                <br> 6) Finally, the tick function is initialized, this function
+                <br>
+                <p style="padding-left:10em">
+                    a) starts the animate function which makes the necessary calculation of the time changed between current frame and last frame for animation, these parameters are saved in global variables, then
+                    <br> b) starts the the handleKey function which listens to the status of code 37(Left Key), 39(Right Key) and rotates when one of this key is on, the params.angle changes, this change affects why the ship’s angle changes. After handling the keys events,
+                    <br> c) the animation process starts which redraws the ship with the changed parameters. Initially these parameters are the ones from the params object, and the canvas is cleared. Before drawing, the function defines the affine transformation. This are the setTransform(a,b,c,d,e,f) where in a 3x3 matrix Row1=[a,c,e] Row2=[b,d,f] Row3=[0,0,1], which defines the skewing and scaling, in this example they aren’t use, this is why it is set to the default. Then applies a translation to move to x0 and y0. Finally it applies the rotation with the rotation R = params.angle /180*Math.PI. The angle variable is changed when the key left or right are pressed or the dat GUI angle variable are change. Finally, the ship is draw and reset the setTransformation to default, in case some JS inner function affects it.
+                    <br> d) Finally the requestAnimFrame is called with the the tick function as a callback and this is why the callback lopping which maintains this steps a-d running until the browser tab is closed or the canvas is hidden.
+                </p>
+            </p>
+        </p>
+        <p>
+            <h4>Q2A:Position Control</h4>
+    <p>
+        This canvas represents the solution to the Part1 Q2A. It adds action when the up and bottom button are push. If the inSpace is false it moves like it is in the sky, it can control the position directly.
+    </p>
+       <h4>Q2B:Torus</h4>
+    <p>
+        This canvas represents the solution to the Part1 Q2B. It Creates a Torus out of the world. each the ship transports in a torus, pacman style.
+    </p>
+       <h4>Q3:Velocity Control</h4>
+    <p>
+        This canvas represents the solution to the Part1 Q3. When inSpace is on, the ship moves like it was in space, it influence the velocity but can't control the position.
+    </p>
+        </p>
+    </div>
     <!-- Loading Scripts -->
     <script src="js/dat.gui.js" type="text/javascript"></script>
     <script src="js/main_part1.js" type="text/javascript"></script>
 </body>
+
 </html>
