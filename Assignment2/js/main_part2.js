@@ -90,15 +90,18 @@ function onMouseMove(event) {
         var rect = event.target.getBoundingClientRect();
         var xpix = event.clientX - rect.left;
         var ypix = event.clientY - rect.top;
-        this.point.setCurrent(xpix,ypix);
-        this.drawPolyline(this.original.ctx,this.point,xpix,ypix);
+        this.point.setCurrent(xpix, ypix);
+        this.drawPolyline(this.original.ctx, this.point, xpix, ypix);
+        this.drawAll();
     }
 }
 
 function onMouseUp(event) {
     // Stop dragging
     this.dragRedPin = 0;
-    this.point.deactivate();
+    if (this.point !== null) {
+        this.point.deactivate();
+    }
 }
 
 
@@ -156,19 +159,19 @@ function Part2Constructor(canvasName1, canvasName2, params, datFolder, eventHand
 
 
     this.drawAll();
-    this.drawBoundingBox(this.original.ctx, this.original.boundingBoxPoints,this.original.w,this.original.h);
+    this.drawBoundingBox(this.original.ctx, this.original.boundingBoxPoints);
 }
 
-Part2Constructor.prototype.initGUI = function(datFolder){
+Part2Constructor.prototype.initGUI = function (datFolder) {
     datFolder.open();
-    datFolder.add(this.params, 'x0').min(0).max(this.transform.w).listen().onChange(this.drawAll.bind(this));
-    datFolder.add(this.params, 'y0').min(0).max(this.transform.h).listen().onChange(this.drawAll.bind(this));
-    datFolder.add(this.params, 'scale').min(0.01).max(2.5).step(0.01).listen().onChange(this.drawAll.bind(this));
-    datFolder.add(this.params, 'angle').min(-180).max(180).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(this.params, 'x0').min(0).max(this.transform.w).onChange(this.drawAll.bind(this));
+    datFolder.add(this.params, 'y0').min(0).max(this.transform.h).onChange(this.drawAll.bind(this));
+    datFolder.add(this.params, 'scale').min(0.01).max(2.5).step(0.01).onChange(this.drawAll.bind(this));
+    datFolder.add(this.params, 'angle').min(-180).max(180).onChange(this.drawAll.bind(this));
     datFolder.add(this.params, 'showImage').onChange(this.drawAll.bind(this));
 }
 
-Part2Constructor.prototype.initMouseEventListener = function(eventHandlerObject){
+Part2Constructor.prototype.initMouseEventListener = function (eventHandlerObject) {
     this.original.canvas.addEventListener("mousedown", eventHandlerObject.mousedown.bind(this), false);
     this.transform.canvas.addEventListener("mousedown", eventHandlerObject.mousedown.bind(this), false);
     this.original.canvas.addEventListener("mousemove", eventHandlerObject.mousemove.bind(this), false);
@@ -210,27 +213,37 @@ Part2Constructor.prototype.drawShape = function (ctx, pts) {
     // TODO: Q2 - Draw shape corresponding to pts
 
     ctx.beginPath();
-    ctx.moveTo(pts[0],pts[1]);
-    for(var i = 2; i < pts.length-1; i += 2){
-        ctx.lineTo(pts[i],pts[i+1]);
+    ctx.moveTo(pts[0], pts[1]);
+    for (var i = 2; i < pts.length - 1; i += 2) {
+        ctx.lineTo(pts[i], pts[i + 1]);
     }
     ctx.stroke();
 
 }
 
 Part2Constructor.prototype.transformPoints = function (M, pts) {
-    var pts2 = new Float32Array;
+    var pts2 = new Array;
     var v3 = vec3.create();
     // TODO: Q3 - Transform shapes using affine transform
 
-    for(var i = 0; i < pts.length-1;i+=2){
-        v3.set(v3,pts[i],pts[i+1],0);
-        v3.transformMat3(v3,v3,M);
-        pts2[i] = v3[0];
-        pts2[i+1] = v3[1];
+    for (var i = 0; i < pts.length - 1; i += 2) {
+        vec3.set(v3, pts[i], pts[i + 1], 1);
+        vec3.transformMat3(v3, v3, M);
+        pts2.push(v3[0], v3[1]);
     }
-
     return pts2;
+}
+
+Part2Constructor.prototype.transformMat = function (M) {
+    mat3.translate(M, M, [this.params.x0, this.params.y0]);
+    mat3.scale(M, M, [this.params.scale, this.params.scale]);
+    mat3.rotate(M, M, this.params.angle);
+    mat3.translate(M, M, [-(this.original.w / 2), 0]);
+}
+Part2Constructor.prototype.drawImage = function (M,ctx,canvasImage) {
+    ctx.setTransform(M[0], M[1], M[3], M[4], M[6], M[7]);
+    ctx.drawImage(canvasImage,0,0);
+    ctx.setTransform(1,0,0,1,0,0);
 }
 
 Part2Constructor.prototype.drawAll = function () {
@@ -240,31 +253,37 @@ Part2Constructor.prototype.drawAll = function () {
     // TODO: Q2 - Draw bounding box of canvas1 using drawShape()
 
     var M = mat3.create();
-        // TODO: Q3 - define the content of M
-    M.
-    var matElem = document.getElementById('mat')
-    matElem.innerHTML = 'M = ' + mat3.toHTML(M)
-        // console.log(M)
+    // TODO: Q3 - define the content of M
+    this.transformMat(M);
+    this.transform.boundingBoxPoints = this.transformPoints(M, this.original.boundingBoxPoints);
+    // console.log(M)
 
     // TODO: Q3 - Draw bounding box of canvas1 transformed to canvas2
 
+    this.drawImage(M,this.transform.ctx,this.original.canvas);
+    this.drawBoundingBox(this.transform.ctx, this.transform.boundingBoxPoints);
+
     // TODO: Q5 - Copy canvas1 transformed into canvas2
+
+    mat3.translate(M, M, [(this.original.w / 2), 0]);
+    var matElem = document.getElementById('mat');
+    matElem.innerHTML = 'M = ' + mat3.toHTML(M);
 }
 
-Part2Constructor.prototype.drawPolyline = function (ctx,point,x,y) {
+Part2Constructor.prototype.drawPolyline = function (ctx, point, x, y) {
     ctx.strokeStyle = '#ff8000'; // Orange
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(point.last_x,point.last_y);
-    ctx.lineTo(point.current_x,point.current_y);
+    ctx.moveTo(point.last_x, point.last_y);
+    ctx.lineTo(point.current_x, point.current_y);
     //ctx.closePath();
     ctx.stroke();
 }
 
-Part2Constructor.prototype.drawBoundingBox = function(ctx,points,w,h){
+Part2Constructor.prototype.drawBoundingBox = function (ctx, points) {
     ctx.strokeStyle = "#0000FF";
     ctx.lineWidth = 6;
-    this.drawShape(ctx,points);
+    this.drawShape(ctx, points);
 }
 
 
@@ -309,7 +328,7 @@ $Point.prototype.resetPoint = function (x, y) {
 }
 
 ////Canvas Object Creator
-function $CanvasObjectCreator(canvasName){
+function $CanvasObjectCreator(canvasName) {
     var canvas = document.getElementById(canvasName);
     return {
         name: canvasName,
@@ -317,6 +336,6 @@ function $CanvasObjectCreator(canvasName){
         ctx: canvas.getContext('2d'),
         w: canvas.width,
         h: canvas.height,
-        boundingBoxPoints:[0,0,canvas.width,0,canvas.width,canvas.height,0,canvas.height,0,0]
+        boundingBoxPoints: [0, 0, canvas.width, 0, canvas.width, canvas.height, 0, canvas.height, 0, 0]
     };
 }
