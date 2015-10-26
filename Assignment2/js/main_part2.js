@@ -50,8 +50,8 @@ function onMouseDown(event) {
     var ypix = event.clientY - rect.top;
 
     // Uncomment for debugging
-    console.log("Mouse Down", event)
-    console.log("Pixel coordinates", xpix, ypix)
+    //console.log("Mouse Down", event)
+    //console.log("Pixel coordinates", xpix, ypix)
 
     if (event.target == this.original.canvas) {
 
@@ -132,60 +132,50 @@ mat3.toHTML = function (m) {
 //Part 2 Function Constructor
 function Part2Constructor(canvasName1, canvasName2, params, datFolder, eventHandlerObject) {
 
-    var canvas1 = document.getElementById(canvasName1);
-    var canvas2 = document.getElementById(canvasName2);
-
     //Initialize Params
     this.params = params;
 
     //Initialize Canvas
-    this.original = {
-        name: canvasName1,
-        canvas: canvas1,
-        ctx: canvas1.getContext('2d'),
-        w: canvas1.width,
-        h: canvas1.height,
-        boundingBox:[0,0,canvas1.width,0,canvas1.width,canvas1.height,0,canvas1.height,0,0]
-    };
-    this.transform = {
-        name: canvasName2,
-        canvas: canvas2,
-        ctx: canvas2.getContext('2d'),
-        w: canvas2.width,
-        h: canvas2.height,
-        boundingBox:null
-    };
+    this.original = $CanvasObjectCreator(canvasName1);
+    this.transform = $CanvasObjectCreator(canvasName2);
 
     //Initialize GUI Folder params
-    datFolder.open();
-    datFolder.add(params, 'x0').min(0).max(canvas2.width).listen().onChange(this.drawAll.bind(this));
-    datFolder.add(params, 'y0').min(0).max(canvas2.height).listen().onChange(this.drawAll.bind(this));
-    datFolder.add(params, 'scale').min(0.01).max(2.5).step(0.01).listen().onChange(this.drawAll.bind(this));
-    datFolder.add(params, 'angle').min(-180).max(180).listen().onChange(this.drawAll.bind(this));
-    datFolder.add(params, 'showImage').onChange(this.drawAll.bind(this));
+    this.initGUI(datFolder);
     //var parent = document.getElementById('controls');
     //parent.appendChild(gui.domElement);
 
 
     //Initialize Mouse Event Handlers
     this.dragRedPin = 0;
-
-    canvas1.addEventListener("mousedown", eventHandlerObject.mousedown.bind(this), false);
-    canvas2.addEventListener("mousedown", eventHandlerObject.mousedown.bind(this), false);
-    canvas1.addEventListener("mousemove", eventHandlerObject.mousemove.bind(this), false);
-    canvas2.addEventListener("mousemove", eventHandlerObject.mousemove.bind(this), false);
-    canvas1.addEventListener("mouseup", eventHandlerObject.mouseup.bind(this), false);
-    canvas2.addEventListener("mouseup", eventHandlerObject.mouseup.bind(this), false);
+    this.initMouseEventListener(eventHandlerObject);
 
     //Define What happens when pin is dragged
     this.onDragRedPin = eventHandlerObject.ondragpin;
 
     this.point = null;
 
+
     this.drawAll();
-    this.drawBoundingBox(this.original.ctx,this.original.w,this.original.h);
+    this.drawBoundingBox(this.original.ctx, this.original.boundingBoxPoints,this.original.w,this.original.h);
 }
 
+Part2Constructor.prototype.initGUI = function(datFolder){
+    datFolder.open();
+    datFolder.add(this.params, 'x0').min(0).max(this.transform.w).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(this.params, 'y0').min(0).max(this.transform.h).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(this.params, 'scale').min(0.01).max(2.5).step(0.01).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(this.params, 'angle').min(-180).max(180).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(this.params, 'showImage').onChange(this.drawAll.bind(this));
+}
+
+Part2Constructor.prototype.initMouseEventListener = function(eventHandlerObject){
+    this.original.canvas.addEventListener("mousedown", eventHandlerObject.mousedown.bind(this), false);
+    this.transform.canvas.addEventListener("mousedown", eventHandlerObject.mousedown.bind(this), false);
+    this.original.canvas.addEventListener("mousemove", eventHandlerObject.mousemove.bind(this), false);
+    this.transform.canvas.addEventListener("mousemove", eventHandlerObject.mousemove.bind(this), false);
+    this.original.canvas.addEventListener("mouseup", eventHandlerObject.mouseup.bind(this), false);
+    this.transform.canvas.addEventListener("mouseup", eventHandlerObject.mouseup.bind(this), false);
+}
 
 Part2Constructor.prototype.drawPin = function () {
     // Reset canvases
@@ -215,7 +205,6 @@ Part2Constructor.prototype.drawSquare = function (ctx, x, y, w) {
     ctx.stroke();
 }
 
-
 Part2Constructor.prototype.drawShape = function (ctx, pts) {
 
     // TODO: Q2 - Draw shape corresponding to pts
@@ -230,11 +219,18 @@ Part2Constructor.prototype.drawShape = function (ctx, pts) {
 }
 
 Part2Constructor.prototype.transformPoints = function (M, pts) {
-    var pts2
-
+    var pts2 = new Float32Array;
+    var v3 = vec3.create();
     // TODO: Q3 - Transform shapes using affine transform
 
-    return pts2
+    for(var i = 0; i < pts.length-1;i+=2){
+        v3.set(v3,pts[i],pts[i+1],0);
+        v3.transformMat3(v3,v3,M);
+        pts2[i] = v3[0];
+        pts2[i+1] = v3[1];
+    }
+
+    return pts2;
 }
 
 Part2Constructor.prototype.drawAll = function () {
@@ -243,8 +239,9 @@ Part2Constructor.prototype.drawAll = function () {
 
     // TODO: Q2 - Draw bounding box of canvas1 using drawShape()
 
-    var M = mat3.create()
+    var M = mat3.create();
         // TODO: Q3 - define the content of M
+    M.
     var matElem = document.getElementById('mat')
     matElem.innerHTML = 'M = ' + mat3.toHTML(M)
         // console.log(M)
@@ -253,7 +250,6 @@ Part2Constructor.prototype.drawAll = function () {
 
     // TODO: Q5 - Copy canvas1 transformed into canvas2
 }
-
 
 Part2Constructor.prototype.drawPolyline = function (ctx,point,x,y) {
     ctx.strokeStyle = '#ff8000'; // Orange
@@ -265,8 +261,7 @@ Part2Constructor.prototype.drawPolyline = function (ctx,point,x,y) {
     ctx.stroke();
 }
 
-Part2Constructor.prototype.drawBoundingBox = function(ctx,w,h){
-    var points = [0,0,w,0,w,h,0,h,0,0];
+Part2Constructor.prototype.drawBoundingBox = function(ctx,points,w,h){
     ctx.strokeStyle = "#0000FF";
     ctx.lineWidth = 6;
     this.drawShape(ctx,points);
@@ -311,4 +306,17 @@ $Point.prototype.resetPoint = function (x, y) {
     this.last_x = 0;
     this.last_y = 0;
     this.active = true;
+}
+
+////Canvas Object Creator
+function $CanvasObjectCreator(canvasName){
+    var canvas = document.getElementById(canvasName);
+    return {
+        name: canvasName,
+        canvas: canvas,
+        ctx: canvas.getContext('2d'),
+        w: canvas.width,
+        h: canvas.height,
+        boundingBoxPoints:[0,0,canvas.width,0,canvas.width,canvas.height,0,canvas.height,0,0]
+    };
 }
