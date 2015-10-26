@@ -176,7 +176,7 @@ function handleKeyDownOriginal (event) {
     this.currentlyPressedKeys[event.keyCode] = true;
 
     // Handle single key presses (for example for firing the gun)
-    console.log(event);
+    //console.log(event);
     if (event.keyCode == 67) { // K
         console.log('Pressed "K"');
     }

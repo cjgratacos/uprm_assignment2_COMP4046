@@ -173,3 +173,8 @@ button{
    border-right: solid 1pt;
 }
 .matrixTable td {padding: 2px 10px;}
+
+.matrix{
+    padding-top: 3%;
+    padding-right: 3%;
+}

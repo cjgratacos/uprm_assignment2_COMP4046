@@ -23,19 +23,19 @@ function init_app() {
         //Parameters for the Dat GUI
         {
             'x0': 150,
-    'y0': 20,
-    'scale': 1.0,
-    'angle': 0,
-    'showImage': true
+            'y0': 20,
+            'scale': 1.0,
+            'angle': 0,
+            'showImage': true
         },
         //Dat GUI folder
         gui.addFolder('Interactive Transformation'),
         //Mouse Event Handler Object
         {
-            mousedown:onMouseDown,
-            mouseup:onMouseUp,
-            mousemove:onMouseMove,
-            ondragpin:onDragRedPin
+            mousedown: onMouseDown,
+            mouseup: onMouseUp,
+            mousemove: onMouseMove,
+            ondragpin: onDragRedPin
         }
     );
 }
@@ -45,23 +45,31 @@ function init_app() {
 
 /* ### Mouse Event Handler ### */
 function onMouseDown(event) {
-    var rect = event.target.getBoundingClientRect()
-    xpix = event.clientX - rect.left;
-    ypix = event.clientY - rect.top;
+    var rect = event.target.getBoundingClientRect();
+    var xpix = event.clientX - rect.left;
+    var ypix = event.clientY - rect.top;
 
     // Uncomment for debugging
-    //console.log("Mouse Down", event)
-    //console.log("Pixel coordinates", xpix,ypix)
+    console.log("Mouse Down", event)
+    console.log("Pixel coordinates", xpix, ypix)
 
     if (event.target == this.original.canvas) {
 
         // TODO: Q1 - Add functionality to draw polylines instead of just single squares
 
+
         this.original.ctx.strokeStyle = '#ff8000'; // Orange
         this.original.ctx.lineWidth = 4;
         this.original.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.drawSquare(this.original.ctx, xpix, ypix, 4);
-        this.drawAll()
+
+        if (this.point === null || this.point === undefined) {
+            this.point = new $Point(xpix, ypix);
+        } else {
+            this.point.resetPoint(xpix, ypix);
+        }
+
+        this.drawAll();
     } else if (event.target == this.transform.canvas) {
         // If close to the red pin
         if ((Math.abs(xpix - this.params.x0) < 10) && (Math.abs(ypix - this.params.y0) < 10)) {
@@ -76,20 +84,28 @@ function onMouseDown(event) {
 
 function onMouseMove(event) {
     // Dispatch move event to drag if we are currently dragging the red pin
-    if ((this.dragRedPin > 0) && (event.target == this.transform)) return this.onDragRedPin(event)
-        // Ignore else
+    if ((this.dragRedPin > 0) && (event.target == this.transform)) return this.onDragRedPin(event);
+    // Ignore else
+    if (this.point !== null && this.point.active) {
+        var rect = event.target.getBoundingClientRect();
+        var xpix = event.clientX - rect.left;
+        var ypix = event.clientY - rect.top;
+        this.point.setCurrent(xpix,ypix);
+        this.drawPolyline(this.original.ctx,this.point,xpix,ypix);
+    }
 }
 
 function onMouseUp(event) {
     // Stop dragging
     this.dragRedPin = 0;
+    this.point.deactivate();
 }
 
 
 function onDragRedPin(event) {
     var rect = event.target.getBoundingClientRect()
-    xpix = event.clientX - rect.left
-    ypix = event.clientY - rect.top
+    var xpix = event.clientX - rect.left
+    var ypix = event.clientY - rect.top
 
     // Assume (event.target == canvas2)
     this.params.x0 = xpix;
@@ -128,23 +144,25 @@ function Part2Constructor(canvasName1, canvasName2, params, datFolder, eventHand
         canvas: canvas1,
         ctx: canvas1.getContext('2d'),
         w: canvas1.width,
-        h: canvas1.height
+        h: canvas1.height,
+        boundingBox:[0,0,canvas1.width,0,canvas1.width,canvas1.height,0,canvas1.height,0,0]
     };
     this.transform = {
         name: canvasName2,
         canvas: canvas2,
         ctx: canvas2.getContext('2d'),
         w: canvas2.width,
-        h: canvas2.height
+        h: canvas2.height,
+        boundingBox:null
     };
 
     //Initialize GUI Folder params
     datFolder.open();
-    datFolder.add(params, 'x0').min(0).max(canvas2.width).listen().onChange(this.drawAll);
-    datFolder.add(params, 'y0').min(0).max(canvas2.height).listen().onChange(this.drawAll);
-    datFolder.add(params, 'scale').min(0.01).max(2.5).step(0.01).listen().onChange(this.drawAll);
-    datFolder.add(params, 'angle').min(-180).max(180).listen().onChange(this.drawAll);
-    datFolder.add(params, 'showImage').onChange(this.drawAll);
+    datFolder.add(params, 'x0').min(0).max(canvas2.width).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(params, 'y0').min(0).max(canvas2.height).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(params, 'scale').min(0.01).max(2.5).step(0.01).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(params, 'angle').min(-180).max(180).listen().onChange(this.drawAll.bind(this));
+    datFolder.add(params, 'showImage').onChange(this.drawAll.bind(this));
     //var parent = document.getElementById('controls');
     //parent.appendChild(gui.domElement);
 
@@ -161,6 +179,11 @@ function Part2Constructor(canvasName1, canvasName2, params, datFolder, eventHand
 
     //Define What happens when pin is dragged
     this.onDragRedPin = eventHandlerObject.ondragpin;
+
+    this.point = null;
+
+    this.drawAll();
+    this.drawBoundingBox(this.original.ctx,this.original.w,this.original.h);
 }
 
 
@@ -169,7 +192,7 @@ Part2Constructor.prototype.drawPin = function () {
     this.original.ctx.setTransform(1, 0, 0, 1, 0, 0) // Reset transform
     this.transform.ctx.setTransform(1, 0, 0, 1, 0, 0)
         //this.original.ctx.clearRect(0,0,w1,h1)  // Clear canvas
-    this.transform.ctx.clearRect(0, 0, w2, h2);
+    this.transform.ctx.clearRect(0, 0, this.transform.w, this.transform.h);
 
     // Draw red pin on canvas 1
     this.original.ctx.strokeStyle = '#ff0000';
@@ -193,9 +216,16 @@ Part2Constructor.prototype.drawSquare = function (ctx, x, y, w) {
 }
 
 
-Part2Constructor.prototype.drawShape = function (cts, pts) {
+Part2Constructor.prototype.drawShape = function (ctx, pts) {
 
     // TODO: Q2 - Draw shape corresponding to pts
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0],pts[1]);
+    for(var i = 2; i < pts.length-1; i += 2){
+        ctx.lineTo(pts[i],pts[i+1]);
+    }
+    ctx.stroke();
 
 }
 
@@ -213,13 +243,72 @@ Part2Constructor.prototype.drawAll = function () {
 
     // TODO: Q2 - Draw bounding box of canvas1 using drawShape()
 
-    M = mat3.create()
+    var M = mat3.create()
         // TODO: Q3 - define the content of M
-    matElem = document.getElementById('mat')
+    var matElem = document.getElementById('mat')
     matElem.innerHTML = 'M = ' + mat3.toHTML(M)
         // console.log(M)
 
     // TODO: Q3 - Draw bounding box of canvas1 transformed to canvas2
 
     // TODO: Q5 - Copy canvas1 transformed into canvas2
+}
+
+
+Part2Constructor.prototype.drawPolyline = function (ctx,point,x,y) {
+    ctx.strokeStyle = '#ff8000'; // Orange
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(point.last_x,point.last_y);
+    ctx.lineTo(point.current_x,point.current_y);
+    //ctx.closePath();
+    ctx.stroke();
+}
+
+Part2Constructor.prototype.drawBoundingBox = function(ctx,w,h){
+    var points = [0,0,w,0,w,h,0,h,0,0];
+    ctx.strokeStyle = "#0000FF";
+    ctx.lineWidth = 6;
+    this.drawShape(ctx,points);
+}
+
+
+////Point Function Constructor for Part 2
+function $Point(x, y) {
+    this.initial_x = x;
+    this.initial_y = y;
+    this.current_x = x;
+    this.current_y = y;
+    this.last_x = 0;
+    this.last_y = 0;
+    this.active = true;
+}
+
+$Point.prototype.setCurrent = function (x, y) {
+    this.last_x = this.current_x;
+    this.last_y = this.current_y;
+    this.current_x = x;
+    this.current_y = y;
+}
+
+$Point.prototype.getDifference_x = function () {
+    return this.current_x - this.last_x;
+}
+
+$Point.prototype.getDifference_y = function () {
+    return this.current_y - this.last_y;
+}
+
+$Point.prototype.deactivate = function () {
+    this.active = false;
+}
+
+$Point.prototype.resetPoint = function (x, y) {
+    this.initial_x = x;
+    this.initial_y = y;
+    this.current_x = x;
+    this.current_y = y;
+    this.last_x = 0;
+    this.last_y = 0;
+    this.active = true;
 }
