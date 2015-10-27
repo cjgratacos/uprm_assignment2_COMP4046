@@ -1,4 +1,4 @@
-"use strict";
+//"use strict";
 
 /*
  * Carlos J. Gratacos
@@ -43,24 +43,29 @@ var params_animation = {
 
 //Array that will contain objects of Part1Constructor, which each element in the array represents a canvas
 var part1Objects = new Array();
-
 //Function that inits everything, it is should be called when the HTML body is loaded
 function init_app() {
-    new imgManager(["../img/asteroid.png","../img/space.png"] ,start);
+    var manager = new imgManager(["./img/asteroid.png", "./img/space.png", "./img/sky.png"], start);
+    //console.log(manager);
+    manager.init();
+    //console.log(manager);
 }
 
-function start(arrayImages){
-     //Pushing to the part1Objects array new Part1Constructor, each element that is pushed represents a canvas
+function start(arrayImages) {
+    //Pushing to the part1Objects array new Part1Constructor, each element that is pushed represents a canvas
     //and a question of the part 1.
-    part1Objects.push(new Part1Constructor("asteroid-bonus","0",{
+    part1Objects.push(new Part1Constructor("asteroid-bonus", "0", {
         keydown: handleKeyDownOriginal,
         keyup: handleKeyUpOriginal,
-        handlerKeys:part3HandlerKeys
-    },{
-        torus:true,
+        handlerKeys: part3HandlerKeys
+    }, {
+        torus: true,
         imgStatus: true,
         images: arrayImages,
-        fire:true
+        canShoot: true,
+        shoot: false,
+        bulletManager: new $BulletManager(5, 125, 10), //(max,velocity,length)
+        asteroid: new $Asteroid(0, 0, 40, 40, 0, 100, arrayImages[0]) //(x,y,w,h,angle,velocity,image)
     }));
     //Since all the canvas are the same size, the initParams initializes the params object with the width and height of the first canvas element
     initParams(part1Objects[0].width, part1Objects[0].height);
@@ -68,6 +73,7 @@ function start(arrayImages){
     initGUI(params, part1Objects[0].width, part1Objects[0].height, part1Folder);
     //Opening the folder so it is view for the user
     part1Folder.open();
+    focusCanvas(part1Objects[0].canvasName, part1Objects[0].canvas);
     //starting the animation
     tick();
 }
@@ -217,15 +223,25 @@ function handleKeyDownOriginal(event) {
     this.currentlyPressedKeys[event.keyCode] = true;
 
     // Handle single key presses (for example for firing the gun)
-    //console.log(event);
     if (event.keyCode == 67) { // K
         console.log('Pressed "K"');
+    }
+
+    if (event.keyCode == 32 && !this.extraParams.shoot) { // Space
+        console.log(event);
+        this.extraParams.shoot = true;
     }
 }
 
 //Original handleKeyUp Function
 function handleKeyUpOriginal(event) {
     this.currentlyPressedKeys[event.keyCode] = false;
+
+
+    if (event.keyCode == 32) { // Space
+        this.extraParams.shoot = false;
+        this.extraParams.bulletManager.justFire = false;
+    }
 }
 
 //Bonus: Key Handler Function
@@ -245,13 +261,13 @@ function part3HandlerKeys(event, params_animation) {
     //Translation
     if (this.currentlyPressedKeys[38]) { // Up
         // TODO: ship translation
-        if (!params.inSpace) {//Not in space
+        if (!params.inSpace) { //Not in space
             //Translate:
             //  x = x+(time * velocity * sin(Angle))
             //  y = y-(time * velocity * cos(Angle))
             params.x0 += params_animation.elapsed * params.velocity * (Math.sin(params.angle / 180 * Math.PI));
             params.y0 -= params_animation.elapsed * params.velocity * (Math.cos(params.angle / 180 * Math.PI));
-        } else {//in space
+        } else { //in space
             //  vx = vx+(time * acceleration * sin(Angle))
             //  vy = vy-(time * acceleration * cos(Angle))
             params.vx += params_animation.elapsed * params.acceleration * (Math.sin(params.angle / 180 * Math.PI));
@@ -259,27 +275,27 @@ function part3HandlerKeys(event, params_animation) {
         }
     }
     if (this.currentlyPressedKeys[40]) { // Down
-        if (!params.inSpace) {//Not in space
+        if (!params.inSpace) { //Not in space
             //Translate:
             //  x = x-(time * velocity * sin(Angle))
             //  y = y+(time * velocity * cos(Angle))
             params.x0 -= params_animation.elapsed * params.velocity * (Math.sin(params.angle / 180 * Math.PI));
             params.y0 += params_animation.elapsed * params.velocity * (Math.cos(params.angle / 180 * Math.PI));
-        } else {//In Space
+        } else { //In Space
             //  vx = vx-(time * acceleration * sin(Angle))
             //  vy = vy+(time * acceleration * cos(Angle))
             params.vx -= params_animation.elapsed * params.acceleration * (Math.sin(params.angle / 180 * Math.PI));
             params.vy += params_animation.elapsed * params.acceleration * (Math.cos(params.angle / 180 * Math.PI));
         }
     }
-    if (params.inSpace) {//In space movement
-        if (params.angle < -90 && params.angle > 90) {//If ship is looking down
+    if (params.inSpace) { //In space movement
+        if (params.angle < -90 && params.angle > 90) { //If ship is looking down
             //Translate:
             //  x = x+(time * vx)
             //  y = y-(time * vy)
             params.x0 += params.vx * params_animation.elapsed;
             params.y0 -= params.vy * params_animation.elapsed;
-        } else {//If ship is looking up
+        } else { //If ship is looking up
             //Translate:
             //  x = x+(time * vx)
             //  y = y+(time * vy)
@@ -298,6 +314,9 @@ function part3HandlerKeys(event, params_animation) {
         //   params.vy +=0.01;
         // }
     }
+
+    this.extraParams.bulletManager.moveBullets(params_animation.elapsed);
+    this.extraParams.asteroid.moveAsteroid(params_animation.elapsed);
 }
 
 
@@ -325,8 +344,14 @@ function Part1Constructor(canvasName, canvasNumber, keyHandlerObject, extraParam
     this.start(canvasName, canvasNumber, keyHandlerObject);
 
     this.extraParams = extraParameters || {
-        torus: false
+        torus: false,
+        imgStatus: false,
+        canShoot: false
     };
+
+    if(this.extraParams.imgStatus){
+        this.extraParams.asteroid.resetAsteroid(this.width,this.height,150,150);
+    }
 }
 
 //Function that starts everything, this function initializes everything in the function constructor
@@ -341,7 +366,7 @@ Part1Constructor.prototype.start = function (canvasName, canvasNumber, keyHandle
     this.width = this.canvas.width;
     this.height = this.canvas.height;
     this.canvasNumber = canvasNumber;
-    this.handleKeys = keyHandlerObject.handlerKeys.bind(this);//binding itself to the function handlerKey,this is due to that is an external function
+    this.handleKeys = keyHandlerObject.handlerKeys.bind(this); //binding itself to the function handlerKey,this is due to that is an external function
     this.initKeys(keyHandlerObject);
 }
 
@@ -398,19 +423,24 @@ Part1Constructor.prototype.drawShipOriginal = function (params) {
 Part1Constructor.prototype.drawShipTorus = function (params) {
     // Define transformation before drawing ship
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (params.inSpace && this.extraParams.imgStatus) {
+        this.ctx.drawImage(this.extraParams.images[1], 0, 0);
+    } else if (this.extraParams.imgStatus == true) {
+        this.ctx.drawImage(this.extraParams.images[2], 0, 0);
+    }
     this.ctx.translate(params.x0, params.y0);
     this.ctx.rotate(params.angle / 180 * Math.PI);
 
     //checks if the current params points (x0,y0) are out of the canvas bounds, between (0,0) and (w,h)
     //If they are not, then they are set to their inverse ranges or bounds
-    if (params.x0 > this.width) {// x0> width, then x0 = 0
+    if (params.x0 > this.width) { // x0> width, then x0 = 0
         params.x0 = 0;
-    } else if (params.x0 < 0) {// x0<0, then x0 = width
+    } else if (params.x0 < 0) { // x0<0, then x0 = width
         params.x0 = this.width;
     }
-    if (params.y0 > this.height) {// y0 >height, then y0= 0
+    if (params.y0 > this.height) { // y0 >height, then y0= 0
         params.y0 = 0;
-    } else if (params.y0 < 0) {// y0<0, then y0= height
+    } else if (params.y0 < 0) { // y0<0, then y0= height
         params.y0 = this.height
     }
 
@@ -426,34 +456,222 @@ Part1Constructor.prototype.drawShipTorus = function (params) {
 
     // Reset canvas transformation after drawing
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    if (this.extraParams.shoot && !this.extraParams.bulletManager.justFire) {
+        this.extraParams.bulletManager.insertBullet(params.x0, params.y0, params.angle);
+        this.extraParams.bulletManager.justFire = true;
+    }
+
+    this.extraParams.bulletManager.drawBullets(this.ctx);
+    this.extraParams.asteroid.draw(this.ctx);
+
+    this.extraParams.bulletManager.checkBulletsBounds(this.width, this.height);
+    this.extraParams.bulletManager.checkCollision(this.extraParams.asteroid);
+
+    if (this.extraParams.bulletManager.mustRemove) {
+        this.extraParams.bulletManager.removeBullets();
+    }
+
+    if (this.extraParams.asteroid.collision) {
+        this.extraParams.asteroid.resetAsteroid(this.width, this.height, params.x0, params.y0, true);
+    } else if (this.extraParams.asteroid.checkOutOfBound(this.width, this.height)) {
+        this.extraParams.asteroid.resetAsteroid(this.width, this.height, params.x0, params.y0);
+    }
+
 }
 
 
-
-
-function imgManager(imagesArrayName, callbackWhenLoaded){
+function imgManager(imagesArrayName, callbackWhenLoaded) {
     this.imagesName = imagesArrayName;
     this.imagesLoaded = 0;
     this.imageArray = new Array();
     this.imagesCount = imagesArrayName.length;
     this.functionToCall = callbackWhenLoaded;
-    this.init();
 }
 
-imgManager.prototype.init = function(){
-    for(var i = 0; i < this.imageCount;i++){
+imgManager.prototype.init = function () {
+    for (var i = 0; i < this.imagesCount; i++) {
         var image = new Image();
-        image.onload = this.check;
+        image.onload = this.check.bind(this);
         image.src = this.imagesName[i];
-        console.log(image);
         this.imageArray.push(image);
     }
 }
 
-imgManager.prototype.check= function(){
-    if(this.imagesLoaded == this.imagesCount){
+imgManager.prototype.check = function () {
+
+    this.imagesLoaded++;
+    if (this.imagesLoaded == this.imagesCount) {
         this.functionToCall(this.imageArray);
-    }else if(this.imagesLoaded < this.imagesCount){
-        this.imagesLoaded++;
     }
+}
+
+
+
+function $Bullet(x, y, angle) {
+    this.angle = angle;
+    this.x = x;
+    this.y = y;
+    this.outOfBounds = false;
+}
+
+$Bullet.prototype.move = function (velocity, elapsed) {
+    //console.log(velocity,elapsed,this.x,this.y);
+    this.x += elapsed * velocity * (Math.sin(this.angle / 180 * Math.PI));
+    this.y -= elapsed * velocity * (Math.cos(this.angle / 180 * Math.PI));
+}
+
+$Bullet.prototype.draw = function (ctx, length) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle / 180 * Math.PI);
+
+    ctx.strokeStyle = "orange";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, length);
+    ctx.stroke();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+$Bullet.prototype.checkBound = function (w, h) {
+    if (this.x < 0 || this.x > w || this.y < 0 || this.y > h) {
+        return true;
+    }
+    return false;
+}
+
+$Bullet.prototype.deactivate = function () {
+    this.outOfBounds = true;
+}
+
+function $BulletManager(maxBullets, velocity, bulletLength) {
+    this.justFire = false;
+    this.bulletLength = bulletLength;
+    this.maxBullet = maxBullets;
+    this.velocity = velocity;
+    this.mustRemove = false;
+    this.bullets = new Array();
+}
+
+$BulletManager.prototype.insertBullet = function (x, y, angle) {
+    if (this.maxBullet > this.bullets.length) {
+        this.bullets.push(new $Bullet(x, y, angle));
+    }
+}
+
+$BulletManager.prototype.removeBullets = function () {
+    var self = this;
+    this.bullets.forEach(function (element, index, array) {
+        if (element.outOfBounds) {
+            array.splice(index, 1);
+        }
+    });
+    self.mustRemove = false;
+}
+
+$BulletManager.prototype.checkBulletsBounds = function (w, h) {
+    var self = this;
+    this.bullets.forEach(function (element) {
+        if (element.checkBound(w, h)) {
+            element.deactivate();
+            self.mustRemove = true;
+        }
+    });
+}
+
+$BulletManager.prototype.drawBullets = function (ctx) {
+    var bulletLength = this.bulletLength;
+    this.bullets.forEach(function (element) {
+        element.draw(ctx, bulletLength);
+    });
+}
+
+$BulletManager.prototype.moveBullets = function (elapsed) {
+    var velocity = this.velocity;
+    this.bullets.forEach(function (element) {
+        element.move(velocity, elapsed);
+    });
+}
+
+$BulletManager.prototype.checkCollision = function (asteroid) {
+    var self = this;
+    this.bullets.forEach(function (element) {
+        if (asteroid.checkCollision(element)) {
+            element.outOfBounds = true;
+            self.mustRemove = true;
+            console.log("collision");
+        }
+    });
+}
+
+
+function $Asteroid(x, y, w, h, angle, velocity, img) {
+    this.x = x;
+    this.y = y;
+    this.angle = angle;
+    this.velocity = velocity;
+    this.img = img;
+    this.w = w;
+    this.h = h;
+    this.outOfBound = false;
+    this.collision = false;
+}
+
+$Asteroid.prototype.draw = function (ctx) {
+    ctx.drawImage(this.img, this.x, this.y, this.w, this.h);
+}
+
+$Asteroid.prototype.moveAsteroid = function (elapsed) {
+    if (this.angle < -90 && this.angle > 90) {
+        this.x += elapsed * this.velocity * (Math.sin(this.angle / 180 * Math.PI));
+        this.y -= elapsed * this.velocity * (Math.cos(this.angle / 180 * Math.PI));
+    } else {
+        this.x += elapsed * this.velocity * (Math.sin(this.angle / 180 * Math.PI));
+        this.y += elapsed * this.velocity * (Math.cos(this.angle / 180 * Math.PI));
+    }
+}
+
+$Asteroid.prototype.resetAsteroid = function (w,h, x, y, destroy) {
+    destroy = destroy || false;
+
+    if (Math.random() >= 0.5) {
+        this.x = getRandomArbitrary(w + 10, w + 29);
+    } else {
+        this.x = -getRandomArbitrary(10, 29);
+    }
+    if (Math.random() >= 0.5) {
+        this.y = getRandomArbitrary(h + 10, h + 29);
+    } else {
+        this.y = -getRandomArbitrary(10, 29);
+    }
+
+    this.angle = Math.atan((y-this.y)/(x-this.x))*(180/Math.PI);
+
+    if (destroy) {
+        this.collision = false;
+    } else {
+        this.outOfBound = false;
+    }
+}
+
+$Asteroid.prototype.checkCollision = function (bullet) {
+    console.log("checking collision",bullet);
+    if (!this.collision && bullet.x >= this.x && bullet.x <= this.w && bullet.y >= this.y && bullet.y <= this.h)     {
+        this.collision = true;
+    }
+
+    return this.collision;
+}
+
+$Asteroid.prototype.checkOutOfBound = function (w, h) {
+    if (this.x <= -60 || this.x >= w + 60 || this.y <= -60 || this.y >= h + 60) {
+        this.outOfBound = true;
+    }
+    return this.outOfBound;
+}
+
+function getRandomArbitrary(min, max) {
+    return Math.random() * (max - min) + min;
 }
