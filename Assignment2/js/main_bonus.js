@@ -481,6 +481,12 @@ Part1Constructor.prototype.drawShipTorus = function (params) {
 }
 
 
+//********************
+//********************
+//image manager
+//It manages the image loading
+//********************
+//********************
 function imgManager(imagesArrayName, callbackWhenLoaded) {
     this.imagesName = imagesArrayName;
     this.imagesLoaded = 0;
@@ -508,6 +514,12 @@ imgManager.prototype.check = function () {
 
 
 
+//********************
+//********************
+//Bullet Function Constructor
+//It represents a single bullet
+//********************
+//********************
 function $Bullet(x, y, angle) {
     this.angle = angle;
     this.x = x;
@@ -546,6 +558,14 @@ $Bullet.prototype.deactivate = function () {
     this.outOfBounds = true;
 }
 
+
+
+//********************
+//********************
+//Bullet Manager Function Contructor
+//It manages the bullet and verifies the collitions
+//********************
+//********************
 function $BulletManager(maxBullets, velocity, bulletLength) {
     this.justFire = false;
     this.bulletLength = bulletLength;
@@ -601,11 +621,17 @@ $BulletManager.prototype.checkCollision = function (asteroid) {
         if (asteroid.checkCollision(element)) {
             element.outOfBounds = true;
             self.mustRemove = true;
-            console.log("collision");
         }
     });
 }
 
+
+//********************
+//********************
+//Asteroid function constructor
+//It manages the asteroid, it also represents the asteroid
+//********************
+//********************
 
 function $Asteroid(x, y, w, h, angle, velocity, img) {
     this.x = x;
@@ -657,8 +683,8 @@ $Asteroid.prototype.resetAsteroid = function (w,h, x, y, destroy) {
 }
 
 $Asteroid.prototype.checkCollision = function (bullet) {
-    console.log("checking collision",bullet);
-    if (!this.collision && bullet.x >= this.x && bullet.x <= this.w && bullet.y >= this.y && bullet.y <= this.h)     {
+    //console.log("checking collision",bullet);
+    if (!this.collision && bullet.x >= this.x && bullet.x <= this.x+this.w && bullet.y >= this.y && bullet.y <= this.y+this.h)     {
         this.collision = true;
     }
 
