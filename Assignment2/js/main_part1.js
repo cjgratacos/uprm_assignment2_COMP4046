@@ -1,67 +1,88 @@
 "use strict";
 
 /*
- * Carlos J. Gratacos (802-10-2990)
+ * Carlos J. Gratacos
  * COMP4046 UPRM 15S1
- * Date: October 13, 2015
- * Description: Second Assignment
+ * Date: October 27, 2015
+ * Description: Second Assignment Part 1: Animation and keyword
  *
  * Note for this File to work all canvas that are going to be used most be of the same size.
+ *
+ * This file contains the necessary infromation and functionality to satisfy the requirements of the part 1 for
+ * the project. It display different animation canvas in which you can interact with them one at a time. They all
+ * share the same GUI params, and each canvas satisfies the requirement to the question on the cavas name.
+ * Eachcanvas can be activated by pressing the button under it.
+ * This canvas uses a function constructor for representing the canvas, this is because it abstract the necessary
+ * informartion, and it follows more with the language design in which is optimize.
+ *
+ * This part is used for the Bonus
  */
-
 
 // Single instance of the DAT GUI used for the Assignment
 // Each part has their own folder
-
 var gui = new dat.GUI({
     autoplace: true
 });
-
+//Dat GUI folder
 var part1Folder = gui.addFolder('Animation and Keyboard');
-
+//params object
 var params ={};
-
+//variable used for keeping the id name of the current focus canvas
 var focus = "";
+//object with parameters used for the animation process
 var params_animation = {
+        //first time calculation
         startTime: 0,
+        //represents the last time it was used or animated
         lastTime: 0,
+        //current - lasttime
         elapsed: 0,
+        //current - startTime
         totalElapsed: 0
 };
 
+//Array that will contain objects of Part1Constructor, which each element in the array represents a canvas
 var part1Objects = new Array();
 
+//Function that inits everything, it is should be called when the HTML body is loaded
 function init_app(){
-
-    part1Objects.push(new Part1Constructor("asteroid-original","0",{
+    //Pushing to the part1Objects array new Part1Constructor, each element that is pushed represents a canvas
+    //and a question of the part 1.
+    part1Objects.push(new Part1Constructor("asteroid-original","0",{ //canvas ID and unique number
+        //Object containing specific Event handler objects for the purpouse of this canvas | original
         keydown: handleKeyDownOriginal,
         keyup: handleKeyUpOriginal,
         handlerKeys: handlerKeysOriginal
     }));
-    part1Objects.push(new Part1Constructor("asteroid-q2a","1",{
+    part1Objects.push(new Part1Constructor("asteroid-q2a","1",{ //canvas ID and unique number
+        //Object containing specific Event handler objects for the purpouse of this canvas | q2a
         keydown: handleKeyDownOriginal,
         keyup: handleKeyUpOriginal,
         handlerKeys:part2HandlerKeys
     }));
-    part1Objects.push(new Part1Constructor("asteroid-q2b","2",{
+    part1Objects.push(new Part1Constructor("asteroid-q2b","2",{ //canvas Id and unique number
+        //Object containing specific Event handler objects for the purpouse of this canvas | q2b
         keydown: handleKeyDownOriginal,
         keyup: handleKeyUpOriginal,
         handlerKeys:part2HandlerKeys
-    },{
+    },{//object is passed where this object has a tourus attribute, which is boolean
         torus:true
     }));
-    part1Objects.push(new Part1Constructor("asteroid-q3","3",{
+    part1Objects.push(new Part1Constructor("asteroid-q3","3",{//canvas Id and unique number
+        //Object containing specific Event handler objects for the purpouse of this canvas | q3
         keydown: handleKeyDownOriginal,
         keyup: handleKeyUpOriginal,
         handlerKeys:part3HandlerKeys
-    },{
+    },{//object is passed where this object has a tourus attribute, which is boolean
         torus:true
     }));
-
+    //Since all the canvas are the same size, the initParams initializes the params object with the width and height of the first canvas element
     initParams(part1Objects[0].width,part1Objects[0].height);
+    //dat GUI initialization
     initGUI(params,part1Objects[0].width,part1Objects[0].height,part1Folder);
-
+    //Opening the folder so it is view for the user
     part1Folder.open();
+    //starting the animation
     tick();
 }
 

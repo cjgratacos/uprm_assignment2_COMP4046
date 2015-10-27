@@ -1,9 +1,9 @@
 "use strict";
 
 /*
- * Carlos J. Gratacos (802-10-2990)
+ * Carlos J. Gratacos
  * COMP4046 UPRM 15S1
- * Date: October 13, 2015
+ * Date: October 27, 2015
  * Description: Second Assignment
  *
  * Note for this File to work all canvas that are going to be used most be of the same size.

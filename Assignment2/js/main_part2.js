@@ -1,8 +1,8 @@
 "use strict";
 /*
- * Carlos J. Gratacos (802-10-2990)
+ * Carlos J. Gratacos
  * COMP4046 UPRM 15S1
- * Date: October 13, 2015
+ * Date: October 27, 2015
  * Description: Second Assignment Part 2: Interactive Transformation
  * The reason this JS file is written with a Function Constructor to operate every function from the prototype
  * chain of the Function Constructor(Part2Constructor) is for:
@@ -320,29 +320,29 @@ Part2Constructor.prototype.drawImage = function (M, ctx, canvasImage) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-//Function that draws everything from canvas orignal to canvas transform. It practically draws all
+//Function that draws everything from canvas orignal to canvas transform.
+//This function is the most used in this part.
 Part2Constructor.prototype.drawAll = function () {
-
+    //Draw the pin in both canvases
     this.drawPin();
 
     // TODO: Q2 - Draw bounding box of canvas1 using drawShape()
-
+    //Creating an identity matrix 3x3
     var M = mat3.create();
     // TODO: Q3 - define the content of M
+    //Transform the matrix M with the params of this object
     this.transformMat(M);
+    //Assign a new bounding box array to the transformation canvas bounding box object attributes, this box is calculated by transforming the points of the orinal canvas bounding box object attributes with matrix M.
     this.transform.boundingBoxPoints = this.transformPoints(M, this.original.boundingBoxPoints);
-    // console.log(M)
 
     // TODO: Q3 - Draw bounding box of canvas1 transformed to canvas2
-
+    //Draw original canvas onto the transformation canvas
     this.drawImage(M, this.transform.ctx, this.original.canvas);
-
+    //Draw the boundong boxes
     this.drawBoundingBox(this.original.ctx, this.original.boundingBoxPoints);
     this.drawBoundingBox(this.transform.ctx, this.transform.boundingBoxPoints);
 
     // TODO: Q5 - Copy canvas1 transformed into canvas2
-
-
 
     //Translate the Matrix M to [(this.original.w / 2), 0] so the GUI appears synchronize with the location of          the red Pin
     mat3.translate(M, M, [(this.original.w / 2), 0]);
@@ -351,13 +351,20 @@ Part2Constructor.prototype.drawAll = function () {
     matElem.innerHTML = 'M = ' + mat3.toHTML(M);
 }
 
+//Function answers Part 2 Q5, it is use to draw from the Transform canvas to the Original Canvas
+//paramenters: xpix= x-value in Transform canvas to be drawed in the Original Canvas
+//             ypix= y-value in Transform canvas to be drawed in the Original Canvas
 Part2Constructor.prototype.drawAllInverse = function (xpix,ypix) {
+    //Draw the Pin
     this.drawPin();
-
+    //Creating 3x3 Identity Matrix and a vector 2x1
     var M = mat3.create();
     var v2 = vec2.create();
+    //Transform the matrix M with the current params
     this.transformMat(M);
+    //Set M to its inverse
     mat3.invert(M,M);
+    //Transform the current (xpix,ypix) that is on the Transform canvas to the original canvas point and draws its polyline on the original canvas then refresh with the drawAll to draw the the original canvas to the transform canvas
     vec2.transformMat3(v2,[xpix,ypix],M);
     this.point.setCurrent(v2[0],v2[1]);
     this.drawPolyline(this.original.ctx,this.point);
@@ -366,15 +373,20 @@ Part2Constructor.prototype.drawAllInverse = function (xpix,ypix) {
     this.drawAll();
 }
 
+//Function that creates or resets the point $Point of the this object
+//parameters: xpix= initial x-value to the point
+//            ypix= initial y-value to the point
+//            inverse = boolean that id true converts the xpix,ypix to its inverse base on the params
 Part2Constructor.prototype.initPoint = function(xpix,ypix,inverse){
+    //checking if inverse was passed, if not it is set to false
     inverse = inverse || false;
-
+    //checking if point has not been created, if not it creates it else it resets it
     if (this.point === null || this.point === undefined) {
             this.point = new $Point(xpix, ypix);
         } else {
             this.point.resetPoint(xpix, ypix);
         }
-
+    //if inverse is true, it converts xpix,ypix to its inverse base on params and sets it in the point
     if(inverse){
         var M = mat3.create();
         var v2 = vec2.create();
@@ -385,6 +397,9 @@ Part2Constructor.prototype.initPoint = function(xpix,ypix,inverse){
     }
 }
 
+//Function that draws a polyline on the canvas context
+//parameters: ctx= canvas context
+//            point= $Point object that is used to create the Polyline
 Part2Constructor.prototype.drawPolyline = function (ctx, point) {
     ctx.strokeStyle = '#ff8000'; // Orange
     ctx.lineWidth = 2;
@@ -395,9 +410,14 @@ Part2Constructor.prototype.drawPolyline = function (ctx, point) {
     ctx.stroke();
 }
 
+//Function that draws a set of point, normally used for the bounding box
+//parameters: ctx= canvas context
+//            points= Array of points that represents the points of a shape
+//This function just converts the ctx stroke to blue and call the drawShape
 Part2Constructor.prototype.drawBoundingBox = function (ctx, points) {
     ctx.strokeStyle = "#0000FF";
     ctx.lineWidth = 6;
+    //drawing the shape, mostly represents the bounding box in blue
     this.drawShape(ctx, points);
 }
 
@@ -407,6 +427,7 @@ Part2Constructor.prototype.drawBoundingBox = function (ctx, points) {
 // This Function Constructor is used to represent a point in the canvas that the user is currently on
 //It is used for painting the canvas when active.
 //It is tried to follow the singleton pattern in JS
+//This object keeps track of the initial point, when current_x,current_y is set, last_x,last_y is updated to the before changed position of current
 //parameters: x= x-value in xy-coordinate
 //            y= y-value in xy-coordinate
 function $Point(x, y) {
@@ -419,10 +440,13 @@ function $Point(x, y) {
     //last point
     this.last_x = 0;
     this.last_y = 0;
-    //point status
+    //point status, it is use to know if to update the point or stop
     this.active = true;
 }
-//
+
+//Function that sets last (x,y) to current (x,y) then updates current (x,y) to new (x,y)
+//parameters: x= x-value
+//            y= y-value
 $Point.prototype.setCurrent = function (x, y) {
     this.last_x = this.current_x;
     this.last_y = this.current_y;
@@ -430,14 +454,15 @@ $Point.prototype.setCurrent = function (x, y) {
     this.current_y = y;
 }
 
+//Function that gets the distance between the current position and the last position of the x-value
 $Point.prototype.getDifference_x = function () {
     return this.current_x - this.last_x;
 }
-
+//Function that gets the distance between the current position and the last position of the y-value
 $Point.prototype.getDifference_y = function () {
     return this.current_y - this.last_y;
 }
-
+//Function that sets activate to false
 $Point.prototype.deactivate = function () {
     this.active = false;
 }

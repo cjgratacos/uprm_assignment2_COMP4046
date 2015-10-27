@@ -33,7 +33,26 @@
             </div>
     </div>
     <div class="panel">
-        <p>sdjl;fkjsfals;</p>
+           <h4>Instructions</h4>
+        <p>The square on the transform canvas represents the original canvas.<br>
+           To interact and see the affine transformation, interact with the GUI parameter.<br>
+            You can draw in the original canvas and see the results in the transform canvas.<br>
+            Or even try and draw on the transform canvas and see the result in the original canvas.
+        </p>
+        <a href="./js/main_part2.js">JS for Part 2</a>
+        <p>Read PDF from Here: <a href="./pdf/Assigment2.pdf">Assignment 2 PDF Answers</a></p>
+        <h4>Note</h4><p>
+            Since this is a progressive part, only one instance of the project is shown, but as you read the instructions of this part from <a href="./pdf/Assg2_GeometryAndGUI.pdf">here</a> you see that all requirements are met.
+        </p>
+        <h4>Q3C: Geometry, Transform Points using 3x3 Matrix</h4>
+        <p>Analyzing this part, What I did to satisfy the requirements is create a Matrix and pass this trnaformation to the Matrix and then apply the transformations from the Matrix to the points in the original canvas to the transform canvas, so they can be seen on the tranform canvas. The transformation operations where in the order: <br>Translation->Scale->Rotation->Translation,<br> this last Translation is of (originalCanvas.width/2,0), this is because if it is not applied the red pin would be the in the blue box border, where when applied the red pin is moved to the location is supposed to. But there is a trick, that when you see the transformation points the Matrix view on the bottom of the original canvas, the representation of x0 in the GUI is seen as (x0 + originalCanvas.width/2). To change this back, the trick is that after trnasforming everytinh that need to be transform and printing the matrix, do a translationon the matrix of (-originalCanvas.width/2,0) and then print, this will present the matrix and will fullfill the requirements. What I used to observe this changes was the Matrix representation of it and the console.log JS function </p>
+        <h4>Q4: Drawing and Geometry, Transform the image</h4><p>
+            The parameters of the setTransform in the canvas are of the form: <br> ctx.setTransform(a,b,c,d,e,f)<br> this represent:<br>
+            | a  c  e |<br>
+            | b  d  f |<br>
+            | 0  0  1 |<br>
+    on a 3x3 matrix, so the values of the 3x3 Matrix M passed to the function are a=M[0], b=M[1], c=M[3], d=M[4], e=M[6], f=M[7]. This is because the array matrix M of a mat3 element from the gl-matrix are stored in a column major array and not row major.
+        </p>
     </div>
     <!-- Loading Scripts -->
     <script src="js/dat.gui.js" type="text/javascript"></script>
